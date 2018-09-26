@@ -1,0 +1,99 @@
+// takes in the requested floors as input and moves the elevator to that floor
+// provides the current floor that the elevator is at as the output
+module elevatorDirection (Clock, Reset, currentFloor, inputfloors, Up, Down);
+
+	input logic Clock, Reset;
+	
+	input logic [5:0] inputfloors; 
+	input logic [5:0] currentFloor;
+
+	output logic Up, Down; // whether elevator is currently going up or down
+		
+	
+	enum {headingUp, headingDown} ps, ns;
+
+	// Next State logic
+	always_comb begin
+		case (ps)
+			headingUp: 	if (inputfloors > currentFloors) 									ns = headingUp;
+							else 																			ns = headingDown;
+			
+			headingDown:if (inputfloors < currentFloors)																			ns = headingDown; 
+							else if (currentFloor[4]==1 & inputfloors[3:0]==4'b0000 & inputfloors[5:4]!=2'b00)		ns = headingUp;
+							else if (currentFloor[3]==1 & inputfloors[2:0]==4'b000 & inputfloors[5:3]!=3'b000)		ns = headingUp;
+							else if (currentFloor[2]==1 & inputfloors[1:0]==4'b00 & inputfloors[5:2]!=4'b0000)		ns = headingUp;
+							else if (currentFloor[1]==1 & inputfloors[0]==0 & inputfloors[5:1]!=5'b00000)				ns = headingUp;
+							else if (currentFloor[0]==1)																				ns = headingUp;
+							else																												ns = headingDown
+							
+
+		endcase
+		
+
+		// gives floor outputs	
+		if (ps==headingUp) begin
+			Up=1;
+			Down=0;
+		end else begin 
+			Up=0;
+			Down=1;		
+		end
+	
+	end
+
+	
+	
+
+	// DFFs
+	always_ff @(posedge Clock) begin
+		if (Reset)
+			ps <= headingUp;
+		else
+			ps <= ns;
+	end
+
+endmodule 
+
+module floorLights_testbench();
+	logic clk;
+	logic [9:0] SW;
+	logic [5:0] currentFloor;
+	logic Up, Down;
+
+
+	floorLights dut (.Clock(clk), .Reset(SW[9]), .SW(SW[5:0]), .Up(Up), .Down(Down), .currentFloor(currentFloor));
+
+	// Set up the clock.
+	parameter CLOCK_PERIOD=100;
+	initial begin
+		clk <= 0;
+		forever #(CLOCK_PERIOD/2) clk <= ~clk;
+	end
+	
+	// Set up the inputs to the design. Each line is a clock cycle.
+	initial begin
+																	
+		SW[9] <= 1; Up <=0; Down <=0; 				@(posedge clk);
+																@(posedge clk);
+		SW[9] <= 0; SW[5:0]=6'b000010;				@(posedge clk);
+		repeat(5)											@(posedge clk);
+		
+		SW[5:0]=6'b011000;								@(posedge clk);			
+		repeat(5)											@(posedge clk);
+
+		SW[5:0]=6'b000100;								@(posedge clk);			
+		repeat(5)											@(posedge clk);
+
+		
+//		SW[9] <= 1; Up <=1; Down <=0; 				@(posedge clk);
+//		SW[5:0]=6'b000100;								@(posedge clk);			
+//		repeat(5)											@(posedge clk);		
+		
+
+		 $stop; // End the simulation.
+	end
+endmodule
+
+
+
+
